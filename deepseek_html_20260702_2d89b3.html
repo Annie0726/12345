@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QC 知识掌握 · 完整仪表板</title>
+    <!-- Chart.js v4 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js">
+    </script>
+    <!-- chartjs-plugin-datalabels v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js">
+    </script>
+    <style>
+        /* ── 全局重置 ── */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif;
+            background: #f0f2f5;
+            color: #1e1f22;
+            padding: 24px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px 20px;
+            margin-bottom: 28px;
+        }
+
+        .header-title h1 {
+            font-size: 26px;
+            font-weight: 600;
+            color: #1e1f22;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .header-title h1 .badge {
+            font-size: 14px;
+            font-weight: 400;
+            background: #eef6fc;
+            color: #0078d4;
+            padding: 2px 14px;
+            border-radius: 40px;
+            border: 1px solid #d0e6f7;
+            white-space: nowrap;
+        }
+
+        .header-actions .update-time {
+            font-size: 13px;
+            color: #6b6f76;
+            background: #fff;
+            padding: 6px 16px;
+            border-radius: 40px;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-actions .update-time .dot {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            background: #00a85a;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 14px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 16px 18px 14px;
+            border: 1px solid #eaeaea;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            border-color: #c9d8e8;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        }
+
+        .stat-card .label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #6b6f76;
+            letter-spacing: 0.2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1e1f22;
+            margin-top: 4px;
+            line-height: 1.2;
+        }
+
+        .stat-card .value .sub {
+            font-size: 14px;
+            font-weight: 400;
+            color: #6b6f76;
+            margin-left: 4px;
+        }
+
+        .stat-card.highlight .value {
+            color: #0078d4;
+        }
+        .stat-card.success .value {
+            color: #00a85a;
+        }
+        .stat-card.warning .value {
+            color: #d47600;
+        }
+        .stat-card.danger .value {
+            color: #c34a4a;
+        }
+
+        .control-bar {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #eaeaea;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+
+        .control-bar .label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e1f22;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-bar .label .sub {
+            font-weight: 400;
+            color: #6b6f76;
+            font-size: 13px;
+        }
+
+        .control-bar select {
+            padding: 8px 20px 8px 14px;
+            border-radius: 8px;
+            border: 1px solid #d0d0d0;
+            font-size: 14px;
+            background: #fafafa;
+            color: #1e1f22;
+            font-weight: 500;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            min-width: 220px;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6f76' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+        }
+
+        .control-bar select:focus {
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.15);
+        }
+
+        .chart-card {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #eaeaea;
+            padding: 20px 24px 24px;
+            margin-bottom: 28px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+
+        .chart-card .chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .chart-card .chart-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e1f22;
+        }
+
+        .chart-card .chart-header .legend-hint {
+            font-size: 13px;
+            color: #6b6f76;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .chart-card .chart-header .legend-hint .dot-line {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chart-card .chart-header .legend-hint .dot-line .line {
+            display: inline-block;
+            width: 24px;
+            height: 3px;
+            border-radius: 4px;
+        }
+
+        .chart-card .chart-header .legend-hint .dot-line .line.blue {
+            background: #0078d4;
+        }
+        .chart-card .chart-header .legend-hint .dot-line .line.orange {
+            background: #d47600;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        .performance-card {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #eaeaea;
+            padding: 20px 24px 24px;
+            margin-bottom: 28px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+
+        .performance-card .perf-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .performance-card .perf-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e1f22;
+        }
+
+        .perf-layout {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .perf-rank {
+            flex: 0 0 220px;
+            min-width: 180px;
+        }
+
+        .perf-rank h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1e1f22;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #eaeaea;
+            padding-bottom: 6px;
+        }
+
+        .perf-rank ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .perf-rank li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        .perf-rank li .rank-num {
+            font-weight: 600;
+            color: #6b6f76;
+            width: 28px;
+            text-align: center;
+        }
+
+        .perf-rank li .rank-name {
+            flex: 1;
+            margin-left: 8px;
+            font-weight: 500;
+        }
+
+        .perf-rank li .rank-score {
+            font-weight: 600;
+            color: #0078d4;
+        }
+
+        .perf-rank li .medal {
+            font-size: 18px;
+            margin-right: 4px;
+        }
+
+        .perf-detail {
+            flex: 1;
+            min-width: 280px;
+            overflow-x: auto;
+        }
+
+        .perf-detail h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1e1f22;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #eaeaea;
+            padding-bottom: 6px;
+        }
+
+        .perf-detail table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .perf-detail th {
+            background: #f7f8fa;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 600;
+            color: #1e1f22;
+            border-bottom: 2px solid #eaeaea;
+            white-space: nowrap;
+        }
+
+        .perf-detail td {
+            padding: 8px 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .perf-detail tr:hover td {
+            background: #fafbfc;
+        }
+
+        .perf-detail .highlight-cell {
+            font-weight: 600;
+            color: #0078d4;
+        }
+
+        .error-section {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #eaeaea;
+            padding: 20px 24px 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+
+        .error-section .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .error-section .section-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e1f22;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .error-section .section-header h2 .count-badge {
+            font-size: 13px;
+            font-weight: 400;
+            background: #f0f0f0;
+            color: #6b6f76;
+            padding: 0 12px;
+            border-radius: 40px;
+            line-height: 24px;
+        }
+
+        .error-layout {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .error-pie {
+            flex: 0 0 300px;
+            min-width: 250px;
+            height: 280px;
+            position: relative;
+        }
+
+        .error-list {
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .error-item {
+            background: #fafbfc;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid #0078d4;
+            transition: background 0.15s;
+        }
+
+        .error-item:hover {
+            background: #f0f4fa;
+        }
+
+        .error-item .q-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #1e1f22;
+            margin-bottom: 4px;
+        }
+
+        .error-item .q-correct {
+            font-size: 13px;
+            color: #00a85a;
+            margin-top: 2px;
+        }
+
+        .error-item .q-correct::before {
+            content: "✅ 正确答案: ";
+            font-weight: 500;
+            color: #1e1f22;
+        }
+
+        .error-item .q-common {
+            font-size: 13px;
+            color: #c34a4a;
+            margin-top: 2px;
+        }
+
+        .error-item .q-common::before {
+            content: "❌ 常见错误: ";
+            font-weight: 500;
+            color: #1e1f22;
+        }
+
+        .error-item .q-tag {
+            display: inline-block;
+            font-size: 11px;
+            background: #eaeaea;
+            color: #6b6f76;
+            padding: 1px 10px;
+            border-radius: 40px;
+            margin-top: 4px;
+        }
+
+        .note {
+            font-size: 12px;
+            color: #999;
+            margin-top: 12px;
+            text-align: right;
+        }
+
+        @media (max-width: 900px) {
+            .perf-layout {
+                flex-direction: column;
+            }
+            .perf-rank {
+                flex: unset;
+                width: 100%;
+            }
+            .error-layout {
+                flex-direction: column;
+                align-items: center;
+            }
+            .error-pie {
+                flex: unset;
+                width: 100%;
+                max-width: 350px;
+                height: 260px;
+            }
+            .error-list {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            .stat-card .value {
+                font-size: 22px;
+            }
+            .control-bar {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 14px 16px;
+            }
+            .control-bar select {
+                width: 100%;
+                min-width: unset;
+            }
+            .chart-card,
+            .performance-card,
+            .error-section {
+                padding: 14px 14px 18px;
+            }
+            .chart-wrapper {
+                height: 220px;
+            }
+            .header-title h1 {
+                font-size: 20px;
+            }
+            .header-title h1 .badge {
+                font-size: 12px;
+                padding: 0 10px;
+            }
+            .perf-detail table {
+                font-size: 13px;
+            }
+            .perf-detail th,
+            .perf-detail td {
+                padding: 6px 6px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .stat-card {
+                padding: 12px 12px 10px;
+            }
+            .stat-card .value {
+                font-size: 20px;
+            }
+            .error-pie {
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+
+        <!-- ═══ 头部 ═══ -->
+        <header class="header">
+            <div class="header-title">
+                <h1>
+                    📊 QC 知识掌握
+                    <span class="badge">个人趋势 · 排名 · 高频错题</span>
+                </h1>
+            </div>
+            <div class="header-actions">
+                <div class="update-time">
+                    <span class="dot"></span>
+                    数据基于 5 场测验 · 更新于 2026-07-02
+                </div>
+            </div>
+        </header>
+
+        <!-- ═══ 统计卡片 ═══ -->
+        <section class="stats-grid" id="statsGrid">
+            <!-- 由JS动态生成 -->
+        </section>
+
+        <!-- ═══ 控制栏 ═══ -->
+        <div class="control-bar">
+            <div class="label">
+                👤 查看个人月度成绩趋势
+                <span class="sub">— Select Member</span>
+            </div>
+            <select id="memberSelect">
+                <!-- 由JS动态生成 -->
+            </select>
+        </div>
+
+        <!-- ═══ 图表卡片 ═══ -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h2>📈 月度成绩趋势 — Monthly Score Trend</h2>
+                <div class="legend-hint" id="legendHint">
+                    <!-- 动态图例由JS更新 -->
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="trendChart"></canvas>
+            </div>
+            <div style="margin-top:12px;font-size:13px;color:#6b6f76;text-align:center;">
+                ⚡ 每个数据点上方显示具体得分（未参加则不显示）
+            </div>
+        </div>
+
+        <!-- ═══ 成员表现总览 ═══ -->
+        <div class="performance-card">
+            <div class="perf-header">
+                <h2>📋 成员平均分排名 & 详细表现</h2>
+                <span style="font-size:13px;color:#6b6f76;">基于全部测验数据</span>
+            </div>
+            <div class="perf-layout">
+                <div class="perf-rank">
+                    <h3>🏅 平均分排名</h3>
+                    <ul id="rankList">
+                        <!-- 由JS动态生成 -->
+                    </ul>
+                </div>
+                <div class="perf-detail">
+                    <h3>📊 详细表现</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>姓名</th>
+                                <th>参与次数</th>
+                                <th>平均分</th>
+                                <th>最高分</th>
+                                <th>最低分</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailBody">
+                            <!-- 由JS动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ 高频错题区域 ═══ -->
+        <section class="error-section">
+            <div class="section-header">
+                <h2>
+                    🧩 高频错误知识点分类 · 具体高频错误
+                    <span class="count-badge">Top 分类 &amp; 错题</span>
+                </h2>
+                <span style="font-size:13px;color:#6b6f76;">基于近期测验统计</span>
+            </div>
+            <div class="error-layout">
+                <div class="error-pie">
+                    <canvas id="pieChart"></canvas>
+                </div>
+                <div class="error-list" id="errorList">
+                    <!-- 由JS动态生成 -->
+                </div>
+            </div>
+            <div class="note">* 分类占比及错题数据为示例，可根据实际测验结果替换</div>
+        </section>
+
+    </div>
+
+    <script>
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  注册 datalabels 插件
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        Chart.register(ChartDataLabels);
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  1. 从 Excel 提取的真实数据
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        const DATES = ['2025-09-17', '2025-09-28', '2025-10-31', '2025-11-27', '2026-05-09'];
+        const DATE_LABELS = ['Sep 17', 'Sep 28', 'Oct 31', 'Nov 27', 'May 09'];
+
+        const MEMBERS = [{
+            name: 'Yuan Andy',
+            scores: [50, 100, 100, 80, 80]
+        }, {
+            name: 'Liao Dick',
+            scores: [50, 100, 100, 80, 100]
+        }, {
+            name: 'Zhu Ben',
+            scores: [40, 100, 100, 100, 90]
+        }, {
+            name: 'Zheng Charlie',
+            scores: [90, 100, 100, 80, 80]
+        }, {
+            name: 'Geng Hagen',
+            scores: [90, 100, 100, 80, 80]
+        }, {
+            name: 'Tian Danny',
+            scores: [null, null, 70, 30, 50]
+        }];
+
+        const COLORS = [
+            '#d47600', '#00a85a', '#6b2fa0', '#008b8b', '#c34a4a', '#0078d4'
+        ];
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  2. 统计指标 (团队总览)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        const totalMembers = MEMBERS.length;
+        const allScores = MEMBERS.flatMap(m => m.scores.filter(s => s !== null));
+        const teamAvg = allScores.length ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) : 0;
+        const memberAvgs = MEMBERS.map(m => {
+            const valid = m.scores.filter(s => s !== null);
+            return valid.length ? Math.round(valid.reduce((a, b) => a + b, 0) / valid.length) : 0;
+        });
+        const highestAvg = Math.max(...memberAvgs);
+        const lowestAvg = Math.min(...memberAvgs.filter(a => a > 0));
+        const excellent = memberAvgs.filter(a => a >= 80).length;
+        const needsImprove = memberAvgs.filter(a => a < 60 && a > 0).length;
+
+        const dailyTeamAvg = DATES.map((_, idx) => {
+            const scores = MEMBERS.map(m => m.scores[idx]).filter(s => s !== null);
+            return scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+        });
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  3. 渲染统计卡片
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        function renderStats() {
+            const container = document.getElementById('statsGrid');
+            const stats = [
+                { label: '👥 参与总人数', value: totalMembers, suffix: '人', cls: 'highlight' },
+                { label: '📈 团队平均分', value: teamAvg, suffix: '', cls: '' },
+                { label: '🏆 最高平均分', value: highestAvg, suffix: '', cls: 'success' },
+                { label: '📉 最低平均分', value: lowestAvg, suffix: '', cls: 'warning' },
+                { label: '⭐ 优秀 (≥80)', value: excellent, suffix: '人', cls: 'success' },
+                { label: '⚠️ 待提升 (<60)', value: needsImprove, suffix: '人', cls: 'danger' }
+            ];
+            container.innerHTML = stats.map(s => `
+                        <div class="stat-card ${s.cls}">
+                            <div class="label">${s.label}</div>
+                            <div class="value">${s.value} <span class="sub">${s.suffix}</span></div>
+                        </div>
+                    `).join('');
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  4. 下拉选项
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        function renderSelect() {
+            const select = document.getElementById('memberSelect');
+            let html = '<option value="all">📊 全部成员对比 (All)</option>';
+            MEMBERS.forEach((m, i) => {
+                html += `<option value="${i}">${m.name}</option>`;
+            });
+            select.innerHTML = html;
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  5. 趋势图 (包含数据标签)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        let chart;
+
+        function buildChart(selectedIndex) {
+            const datasets = [];
+
+            // 团队平均
+            datasets.push({
+                label: '团队平均',
+                data: dailyTeamAvg,
+                borderColor: '#0078d4',
+                backgroundColor: 'rgba(0,120,212,0.08)',
+                borderWidth: 2.5,
+                pointRadius: 5,
+                pointBackgroundColor: '#0078d4',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                tension: 0.25,
+                fill: true,
+                spanGaps: false,
+                borderDash: [],
+                datalabels: {
+                    color: '#0078d4',
+                    anchor: 'end',
+                    align: 'top',
+                    font: { weight: 'bold', size: 10 },
+                    offset: 2,
+                    formatter: function(value) {
+                        return value !== null ? value : '';
+                    },
+                    display: function(context) {
+                        return context.dataset.data[context.dataIndex] !== null;
+                    }
+                }
+            });
+
+            if (selectedIndex === 'all') {
+                // 所有成员
+                MEMBERS.forEach((m, idx) => {
+                    const color = COLORS[idx % COLORS.length];
+                    datasets.push({
+                        label: m.name,
+                        data: m.scores.map(v => v !== null ? v : null),
+                        borderColor: color,
+                        backgroundColor: 'rgba(0,0,0,0)',
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointBackgroundColor: color,
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1.5,
+                        tension: 0.25,
+                        fill: false,
+                        spanGaps: false,
+                        borderDash: [4, 3],
+                        datalabels: {
+                            color: color,
+                            anchor: 'end',
+                            align: 'top',
+                            font: { weight: 'bold', size: 9 },
+                            offset: 2,
+                            formatter: function(value) {
+                                return value !== null ? value : '';
+                            },
+                            display: function(context) {
+                                return context.dataset.data[context.dataIndex] !== null;
+                            }
+                        }
+                    });
+                });
+            } else {
+                // 单个成员
+                const member = MEMBERS[selectedIndex];
+                const color = COLORS[selectedIndex % COLORS.length];
+                datasets.push({
+                    label: member.name,
+                    data: member.scores.map(v => v !== null ? v : null),
+                    borderColor: color,
+                    backgroundColor: 'rgba(0,0,0,0)',
+                    borderWidth: 3,
+                    pointRadius: 6,
+                    pointBackgroundColor: color,
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    tension: 0.25,
+                    fill: false,
+                    spanGaps: false,
+                    borderDash: [],
+                    datalabels: {
+                        color: color,
+                        anchor: 'end',
+                        align: 'top',
+                        font: { weight: 'bold', size: 11 },
+                        offset: 2,
+                        formatter: function(value) {
+                            return value !== null ? value : '';
+                        },
+                        display: function(context) {
+                            return context.dataset.data[context.dataIndex] !== null;
+                        }
+                    }
+                });
+            }
+
+            // 更新图例提示
+            const legendHint = document.getElementById('legendHint');
+            if (selectedIndex === 'all') {
+                legendHint.innerHTML = `
+                            <span class="dot-line"><span class="line blue"></span> 团队平均</span>
+                            <span class="dot-line"><span class="line orange"></span> 各成员</span>
+                        `;
+            } else {
+                const member = MEMBERS[selectedIndex];
+                const color = COLORS[selectedIndex % COLORS.length];
+                legendHint.innerHTML = `
+                            <span class="dot-line"><span class="line blue"></span> 团队平均</span>
+                            <span class="dot-line"><span class="line" style="background:${color};"></span> ${member.name}</span>
+                        `;
+            }
+
+            if (chart) {
+                chart.data.datasets = datasets;
+                chart.update();
+                return;
+            }
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: DATE_LABELS,
+                    datasets: datasets,
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#ffffff',
+                            titleColor: '#1e1f22',
+                            bodyColor: '#1e1f22',
+                            borderColor: '#e0e0e0',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.parsed.y === null || context.parsed.y === undefined) {
+                                        return context.dataset.label + ': 未参加';
+                                    }
+                                    return context.dataset.label + ': ' + context.parsed.y + ' 分';
+                                }
+                            }
+                        },
+                        // 数据标签全局配置（被数据集覆盖）
+                        datalabels: {
+                            display: false // 默认不显示，由数据集控制
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 20,
+                            max: 105,
+                            ticks: {
+                                stepSize: 10,
+                                callback: function(value) { return value + '分'; },
+                                font: { size: 12 }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.05)' },
+                            title: {
+                                display: true,
+                                text: '得分',
+                                font: { size: 13, weight: '500' },
+                                color: '#6b6f76'
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                font: { size: 11 },
+                                maxRotation: 25,
+                                minRotation: 15,
+                            }
+                        }
+                    },
+                    elements: {
+                        line: { borderWidth: 2.5 },
+                        point: { hoverRadius: 7 }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index',
+                    },
+                    animation: { duration: 500 },
+                }
+            });
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  6. 成员排名 & 详细表现
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        function computeMemberStats() {
+            return MEMBERS.map((m, idx) => {
+                const valid = m.scores.filter(s => s !== null);
+                const count = valid.length;
+                const avg = count ? Math.round(valid.reduce((a, b) => a + b, 0) / count) : 0;
+                const max = count ? Math.max(...valid) : null;
+                const min = count ? Math.min(...valid) : null;
+                return { name: m.name, count, avg, max, min, rawScores: m.scores };
+            });
+        }
+
+        function renderRankingAndDetail() {
+            const stats = computeMemberStats();
+            const sorted = [...stats].sort((a, b) => {
+                if (b.avg !== a.avg) return b.avg - a.avg;
+                return a.name.localeCompare(b.name);
+            });
+
+            const rankList = document.getElementById('rankList');
+            rankList.innerHTML = sorted.map((item, index) => {
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index+1}.`;
+                return `
+                            <li>
+                                <span class="rank-num">${medal}</span>
+                                <span class="rank-name">${item.name}</span>
+                                <span class="rank-score">${item.avg}</span>
+                            </li>
+                        `;
+            }).join('');
+
+            const tbody = document.getElementById('detailBody');
+            tbody.innerHTML = sorted.map(item => `
+                        <tr>
+                            <td><strong>${item.name}</strong></td>
+                            <td>${item.count} / ${DATES.length}</td>
+                            <td class="highlight-cell">${item.avg}</td>
+                            <td>${item.max !== null ? item.max : '—'}</td>
+                            <td>${item.min !== null ? item.min : '—'}</td>
+                        </tr>
+                    `).join('');
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  7. 高频错误分类 & 具体错题数据
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        const CATEGORY_DATA = [
+            { label: '标签/规格位置要求 (Label/Spec)', value: 30, color: '#0078d4' },
+            { label: '车缝/线迹/做工 (Stitching)', value: 25, color: '#d47600' },
+            { label: '纸箱重量/尺寸限制 (Carton)', value: 15, color: '#00a85a' },
+            { label: 'QVC客户特殊包装 (QVC packaging)', value: 10, color: '#6b2fa0' },
+            { label: 'PFAS测试取样流程 (PFAS)', value: 8, color: '#c34a4a' },
+            { label: '备用扣使用条件 (Spare button)', value: 5, color: '#008b8b' },
+            { label: '泳装内衬 (Swimwear liner)', value: 4, color: '#d44c6a' },
+            { label: 'AQL抽样转换 (AQL)', value: 3, color: '#8c6bb0' },
+        ];
+
+        const ERROR_ITEMS = [{
+            question: 'For Sheego. The size label of tops (i.e. t-shirts, blouses, sweatshirts, jackets, dresses etc.) must be',
+            correct: 'B. set in the neck seam (缝在领圈)',
+            common: 'A. placed at the garments\' collar (置于领口)',
+            category: '标签/规格位置要求 (Label/Spec)'
+        }, {
+            question: 'According to the updated inspection SOP of Manor orders, which of the following steps are correct: (Multiple answers)',
+            correct: 'A. placed at the garments\' collar; D. Follow CBX as usual (示例)',
+            common: '漏选 A 或 D (Missing A or D)',
+            category: '车缝/线迹/做工 (Stitching)'
+        }, {
+            question: 'With effective starting from 25th/May 2025 onwards, BPH is going to change carton label position to place',
+            correct: 'B. on the front of the small side (one side) (小面正面一侧)',
+            common: 'A. on both opposite front sides of the carton (纸箱两个相对正面)',
+            category: '纸箱重量/尺寸限制 (Carton)'
+        }, {
+            question: 'For bottom items, Customer QVC - Kilian',
+            correct: 'A. Vendors book under \'R\'; C. Combined inspection (示例)',
+            common: 'B. Merge packing; D. Follow CBX as usual (混淆)',
+            category: 'QVC客户特殊包装 (QVC packaging)'
+        }, {
+            question: 'PFAS测试取样流程的正确步骤是？',
+            correct: '取样需包含所有接触材料，并填写完整表格',
+            common: '仅取表面材料，忽略内层',
+            category: 'PFAS测试取样流程 (PFAS)'
+        }, {
+            question: '备用扣的使用条件是什么？',
+            correct: '当服装含备用扣时，必须随附且包装完好',
+            common: '备用扣可省略或随意放置',
+            category: '备用扣使用条件 (Spare button)'
+        }];
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  8. 渲染饼图
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        let pieChart = null;
+
+        function renderPie() {
+            const ctxPie = document.getElementById('pieChart').getContext('2d');
+            const labels = CATEGORY_DATA.map(d => d.label);
+            const values = CATEGORY_DATA.map(d => d.value);
+            const colors = CATEGORY_DATA.map(d => d.color);
+
+            if (pieChart) {
+                pieChart.data.labels = labels;
+                pieChart.data.datasets[0].data = values;
+                pieChart.data.datasets[0].backgroundColor = colors;
+                pieChart.update();
+                return;
+            }
+
+            pieChart = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderColor: '#ffffff',
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 12,
+                                font: { size: 11, weight: '500' },
+                                color: '#1e1f22',
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    let percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return context.label + ': ' + percentage + '%';
+                                }
+                            }
+                        }
+                    },
+                    cutout: '60%',
+                }
+            });
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  9. 渲染具体错题列表
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        function renderErrorList() {
+            const container = document.getElementById('errorList');
+            container.innerHTML = ERROR_ITEMS.map(item => `
+                        <div class="error-item">
+                            <div class="q-title">📌 ${item.question}</div>
+                            <div class="q-correct">${item.correct}</div>
+                            <div class="q-common">${item.common}</div>
+                            <span class="q-tag">${item.category}</span>
+                        </div>
+                    `).join('');
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  10. 下拉切换 & 初始化
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        document.getElementById('memberSelect').addEventListener('change', function(e) {
+            const val = e.target.value;
+            if (val === 'all') {
+                buildChart('all');
+            } else {
+                buildChart(parseInt(val));
+            }
+        });
+
+        // 初始化
+        renderStats();
+        renderSelect();
+        renderRankingAndDetail();
+        renderPie();
+        renderErrorList();
+        buildChart('all');
+
+        // 窗口自适应
+        let resizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (chart) chart.resize();
+                if (pieChart) pieChart.resize();
+            }, 150);
+        });
+    </script>
+
+</body>
+</html>
